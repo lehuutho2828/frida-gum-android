@@ -1,0 +1,78 @@
+name: Update Frida Gum Devkit
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"   # chạy mỗi Chủ Nhật
+  workflow_dispatch:       # cho phép chạy thủ công
+
+jobs:
+  check_update:
+    runs-on: ubuntu-latest
+    outputs:
+      latest_version: ${{ steps.get_latest.outputs.latest }}
+      current_version: ${{ steps.get_current.outputs.current }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Get latest Frida release
+        id: get_latest
+        run: |
+          latest=$(curl -s https://api.github.com/repos/frida/frida/releases/latest | jq -r .tag_name)
+          echo "latest=$latest" >> $GITHUB_OUTPUT
+
+      - name: Get current version
+        id: get_current
+        run: |
+          if [ -f VERSION ]; then
+            current=$(cat VERSION)
+          else
+            current="none"
+          fi
+          echo "current=$current" >> $GITHUB_OUTPUT
+
+  update:
+    needs: check_update
+    if: needs.check_update.outputs.latest_version != needs.check_update.outputs.current_version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download Frida Gum Devkits
+        run: |
+          version=${{ needs.check_update.outputs.latest_version }}
+          echo "Updating to $version"
+
+          mkdir -p frida-gum-android
+          cd frida-gum-android
+
+          for arch in arm arm64 x86 x86_64; do
+            url="https://github.com/frida/frida/releases/download/${version}/frida-gum-devkit-${version}-android-${arch}.tar.xz"
+            echo "Downloading $url"
+            curl -sL $url | tar xJf -
+          done
+
+      - name: Update version file
+        run: echo "${{ needs.check_update.outputs.latest_version }}" > VERSION
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Update Frida Gum Devkit to ${{ needs.check_update.outputs.latest_version }}" || echo "No changes"
+          git push
+
+      - name: Create ZIP artifact
+        run: |
+          version=${{ needs.check_update.outputs.latest_version }}
+          zip -r frida-gum-android-${version}.zip frida-gum-android
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.check_update.outputs.latest_version }}
+          name: "Frida Gum Devkit ${{ needs.check_update.outputs.latest_version }}"
+          body: "Auto-updated Frida Gum Devkit for Android"
+          files: frida-gum-android-${{ needs.check_update.outputs.latest_version }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
