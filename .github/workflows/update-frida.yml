@@ -71,8 +71,8 @@ jobs:
       - name: Cleanup tmp
         run: |
           rm -rf tmp
+          rm -f frida-gum-devkit-*.tar.xz
           git rm -r --cached tmp || true
-
 
       - name: Commit and Push changes
         run: |
