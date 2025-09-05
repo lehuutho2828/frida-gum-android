@@ -1,6 +1,6 @@
 # Frida Gum Devkit (Android)
 
-[![Update Frida Gum Devkit](https://github.com/YOUR_USERNAME/frida-gum-android/actions/workflows/update-frida.yml/badge.svg)](https://github.com/YOUR_USERNAME/frida-gum-android/actions/workflows/update-frida.yml)
+[![Update Frida Gum Devkit](https://github.com/thedangcoder/frida-gum-android/actions/workflows/update-frida.yml/badge.svg)](https://github.com/thedangcoder/frida-gum-android/actions/workflows/update-frida.yml)
 
 This repository provides prebuilt **Frida Gum Devkit** packages for **Android** architectures:
 
