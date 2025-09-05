@@ -1,83 +1,84 @@
-name: Update Frida Gum Devkits
+name: Update Frida Gum
 
 on:
   schedule:
-    - cron: "0 * * * *"  # Check hourly
-  workflow_dispatch:
-
-permissions:
-  contents: write
+    - cron: "0 0 * * *" # chạy mỗi ngày 00:00 UTC
+  workflow_dispatch: # cho phép chạy thủ công
 
 jobs:
-  check_update:
+  update-frida:
     runs-on: ubuntu-latest
-    outputs:
-      latest_version: ${{ steps.get_version.outputs.version }}
-      has_update: ${{ steps.compare.outputs.has_update }}
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Set up jq
+        run: sudo apt-get install -y jq
 
       - name: Get latest Frida version
         id: get_version
         run: |
-          version=$(curl -s https://api.github.com/repos/frida/frida/releases/latest | jq -r .tag_name)
-          echo "version=$version" >> $GITHUB_OUTPUT
+          VERSION=$(curl -s https://api.github.com/repos/frida/frida/releases/latest | jq -r .tag_name)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Latest version: $VERSION"
 
-      - name: Compare with current VERSION
-        id: compare
+      - name: Check current version
+        id: check_version
         run: |
-          latest="${{ steps.get_version.outputs.version }}"
-          current=$(cat VERSION 2>/dev/null || echo "none")
-          echo "Current: $current | Latest: $latest"
-          if [ "$latest" != "$current" ]; then
-            echo "has_update=true" >> $GITHUB_OUTPUT
+          if [ -f VERSION ]; then
+            CURRENT=$(cat VERSION)
           else
-            echo "has_update=false" >> $GITHUB_OUTPUT
+            CURRENT="none"
           fi
+          echo "Current version: $CURRENT"
+          echo "CURRENT=$CURRENT" >> $GITHUB_ENV
 
-  update_frida:
-    needs: check_update
-    if: needs.check_update.outputs.has_update == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Download Frida Gum Devkits
+      - name: Stop if already up to date
+        if: env.VERSION == env.CURRENT
         run: |
-          version="${{ needs.check_update.outputs.latest_version }}"
-          echo "Updating to $version"
+          echo "Already up-to-date: $VERSION"
+          exit 0
 
+      - name: Download Frida Gum devkits
+        run: |
           mkdir -p tmp
           cd tmp
-
-          for arch in arm arm64 x86 x86_64; do
-            url="https://github.com/frida/frida/releases/download/${version}/frida-gum-devkit-${version}-android-${arch}.tar.xz"
-            echo "Downloading $url"
-            curl -sL "$url" | tar xJf -
-
-            src="frida-gum-devkit-${version}-android-${arch}"
-            mkdir -p ../android-${arch}
-            mv "$src/include" ../android-${arch}/
-            mv "$src/lib" ../android-${arch}/
+          for arch in android-arm android-arm64 android-x86 android-x86_64; do
+            url="https://github.com/frida/frida/releases/download/${VERSION}/frida-gum-devkit-${VERSION}-${arch}.tar.xz"
+            echo "Downloading $url ..."
+            curl -L -O "$url"
+            mkdir -p ../$arch
+            tar -xf "frida-gum-devkit-${VERSION}-${arch}.tar.xz" -C ../$arch --strip-components=1
           done
 
-          cd ..
+      - name: Update VERSION file
+        run: echo "${VERSION}" > VERSION
 
-      - name: Update VERSION
-        run: echo "${{ needs.check_update.outputs.latest_version }}" > VERSION
-
-      - name: Cleanup tmp
+      - name: Commit changes
         run: |
-          rm -rf tmp
-          rm -f frida-gum-devkit-*.tar.xz
-          git rm -r --cached tmp || true
-
-      - name: Commit and Push changes
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add VERSION android-*
-          git commit -m "Update to Frida ${{ needs.check_update.outputs.latest_version }}"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git commit -m "Update Frida Gum Devkit to ${VERSION}" || echo "No changes to commit"
           git push
+
+      - name: Create combined zip
+        run: |
+          zip -r frida-gum-devkit-${VERSION}-android.zip android-arm android-arm64 android-x86 android-x86_64
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: Frida Gum ${{ env.VERSION }}
+          body: |
+            Auto-generated release for Frida Gum ${{ env.VERSION }}
+
+            Includes prebuilt devkits for:
+            - android-arm
+            - android-arm64
+            - android-x86
+            - android-x86_64
+          files: |
+            frida-gum-devkit-${{ env.VERSION }}-android.zip
