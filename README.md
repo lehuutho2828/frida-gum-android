@@ -15,6 +15,7 @@ The content is automatically downloaded from the official Frida releases and ext
 
 ## 📂 Repository Structure
 
+```
 frida-gum-android/
 ├── android-arm/
 │   ├── include/   # Header files
@@ -28,6 +29,7 @@ frida-gum-android/
 ├── android-x86_64/
 │   ├── include/
 │   └── lib/
+```
 
 ---
 
