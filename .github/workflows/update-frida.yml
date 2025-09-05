@@ -79,13 +79,13 @@ jobs:
       - name: Update README.md
         run: |
           version=${{ needs.check_update.outputs.latest_version }}
-          cat > README.md <<EOF
+          cat > README.md <<'EOF'
 # Frida Gum Android Prebuilts
 
 This repository contains prebuilt **Frida Gum devkits** for Android.
 
 - Source: [Frida Releases](https://github.com/frida/frida/releases)
-- Version: \`$version\`
+- Version: '"$version"'
 
 ## Architectures
 
@@ -96,11 +96,11 @@ This repository contains prebuilt **Frida Gum devkits** for Android.
 
 Each folder contains:
 
-- \`include/\` → Header files
-- \`lib/\` → Prebuilt libraries
+- `include/` → Header files
+- `lib/` → Prebuilt libraries
 
 ## Repository Structure
-\`\`\`
+```
 frida-gum-android/
 ├── android-arm/
 │   ├── include/
@@ -116,8 +116,7 @@ frida-gum-android/
 │   └── lib/
 ├── VERSION
 └── README.md
-\`\`\`
-
+```
 EOF
 
       - name: Commit and Push changes
