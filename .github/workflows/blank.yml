@@ -1,0 +1,48 @@
+name: Update Frida Gum Devkit
+
+on:
+  workflow_dispatch:   # Cho phép chạy tay
+  schedule:
+    - cron: "0 0 * * 0"  # chạy mỗi Chủ Nhật
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get latest Frida release
+        id: frida
+        run: |
+          LATEST=$(curl -s https://api.github.com/repos/frida/frida/releases/latest | jq -r .tag_name)
+          echo "LATEST=$LATEST" >> $GITHUB_ENV
+
+      - name: Download Frida Gum Devkits
+        run: |
+          mkdir -p tmp
+          cd tmp
+
+          for ABI in android-arm android-arm64 android-x86 android-x86_64; do
+            FILE="frida-gum-devkit-${LATEST}-${ABI}.tar.xz"
+            URL="https://github.com/frida/frida/releases/download/${LATEST}/${FILE}"
+            echo "⬇️ Downloading $URL"
+            curl -L -O "$URL"
+            mkdir -p ../${ABI}
+            tar -xf "$FILE" -C ../${ABI} --strip-components=1
+          done
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git add .
+            git commit -m "Update Frida Gum Devkit to $LATEST"
+            git push
+          else
+            echo "✅ No changes (already up to date)"
+          fi
