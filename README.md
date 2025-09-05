@@ -38,7 +38,7 @@ frida-gum-android/
 ### 1. As Git Submodule
 Add this repo as a submodule in your project:
 
-    git submodule add https://github.com/YOUR_USERNAME/frida-gum-android external/frida-gum
+    git submodule add https://github.com/thedangcoder/frida-gum-android external/frida-gum
     git submodule update --init --recursive
 
 Then include headers in your CMake project:
@@ -54,7 +54,7 @@ Then include headers in your CMake project:
 ### 2. Manual Download
 Alternatively, download this repo as ZIP and extract the required architecture:
 
-    wget https://github.com/YOUR_USERNAME/frida-gum-android/archive/refs/heads/main.zip
+    wget https://github.com/thedangcoder/frida-gum-android/archive/refs/heads/main.zip
 
 ---
 
